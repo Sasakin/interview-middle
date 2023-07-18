@@ -1,20 +1,15 @@
 package ru.rtech.interview.task7.service;
 
-import org.apache.commons.lang3.tuple.Pair;
 import ru.rtech.interview.task7.domain.Person;
-import ru.rtech.interview.task7.repository.PersonRepository;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.List;
 
 public class PersonService {
-
-    // Logger loger
-
-    private final PersonRepository repository;
-
-    public PersonService(PersonRepository repository) {
-        this.repository = repository;
-    }
 
     /**
      * Возвращает средний индекс массы тела всех лиц мужского пола старше 18 лет
@@ -22,33 +17,40 @@ public class PersonService {
      * @return
      */
     public void getAdultMaleUsersAverageBMI() {
-        List<Person> adultPersons = repository.getAdultPersons();
-
-        try {
-            System.out.println("Average imt - " + calculateAverageBMI(adultPersons));
-        } catch (Exception e) {
-            // loger.log(CalculationException when execution calculateAverageBMI);
-            throw new RuntimeException(e);
-        }
-    }
-
-    private Double calculateAverageBMI(List<Person> adultPersons) {
         double totalImt = 0.0;
         long countOfPerson = 0;
         double heightInMeters = 0d;
         double imt = 0d;
 
-        for (Person p : adultPersons) {
-            heightInMeters = p.getHeight() / 100d;
-            imt = p.getWeight() / (Double) (heightInMeters * heightInMeters);
-            totalImt += imt;
+        List<Person> adultPersons = null;
+        try {
+            adultPersons = new ArrayList<>();
+            Connection c = DriverManager.getConnection("jdbc:hsqldb:mem:test", "admin", "qwerty$4");
+            Statement s = c.createStatement();
+            ResultSet rs = s.executeQuery("SELECT * FROM person WHERE sex = 'male' AND age > 18");
+            while (rs.next()) {
+                Person p = new Person();
+                //Retrieve by column name
+                p.setId(rs.getLong("id"));
+                p.setSex(rs.getString("sex"));
+                p.setName(rs.getString("name"));
+                p.setAge(rs.getLong("age"));
+                p.setWeight(rs.getLong("weight"));
+                p.setHeight(rs.getLong("height"));
+                adultPersons.add(p);
+            }
+
+            for (Person p : adultPersons) {
+                heightInMeters = p.getHeight() / 100d;
+                imt = p.getWeight() / (Double) (heightInMeters * heightInMeters);
+                totalImt += imt;
+                countOfPerson++;
+            }
+
+            System.out.println("Average imt - " + totalImt / countOfPerson);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
-        countOfPerson = adultPersons.size();
-
-        return totalImt / countOfPerson;
-
     }
-
-
 
 }
